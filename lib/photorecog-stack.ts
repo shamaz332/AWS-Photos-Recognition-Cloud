@@ -31,7 +31,7 @@ export class PhotorecogStack extends cdk.Stack {
 
     const rekogFunc = new lambda.Function(this, "rekogFunc", {
       code: lambda.Code.fromAsset("recognitionFunction"),
-      runtime: lambda.Runtime.NODEJS_10_X,
+      runtime: lambda.Runtime.PYTHON_3_8,
       handler: "index.handler",
       timeout: Duration.seconds(30),
       memorySize: 1024,
