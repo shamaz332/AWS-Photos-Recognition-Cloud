@@ -52,7 +52,7 @@ export class PhotorecogStack extends cdk.Stack {
     rekogFunc.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["recog:DetectLabel"],
+        actions: ['rekognition:DetectLabels'],
         resources: ["*"],
       })
     );
