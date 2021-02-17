@@ -25,6 +25,28 @@ export class PhotorecogStack extends cdk.Stack {
         type: dynamodb.AttributeType.STRING,
       },
     });
+    // =====================================================================================
+    // Thumbnail Bucket
+    // =====================================================================================
+    const resizedBucket = new s3.Bucket(this, "resizedBucket", {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    new cdk.CfnOutput(this, "resizedBucket", {
+      value: resizedBucket.bucketName,
+    });
+
+    // =====================================================================================
+    // Building our AWS Lambda Function; compute for our serverless microservice
+    //Lambda layer
+    // =====================================================================================
+    const layer = new lambda.LayerVersion(this, "pil", {
+      code: lambda.Code.fromAsset("recogLayer"),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_7],
+      license: "Apache-2.0",
+      description:
+        "A layer to enable the PIL library in our Rekognition Lambda",
+    });
+
     //========================================================
     //Lambda func for Image recognition
     //========================================================
@@ -35,9 +57,11 @@ export class PhotorecogStack extends cdk.Stack {
       handler: "index.handler",
       timeout: Duration.seconds(30),
       memorySize: 1024,
+      layers:[layer],
       environment: {
         TABLE: imageSortTable.tableName,
         BUCKET: imageBucket.bucketName,
+        RESIZEBUCKET:resizedBucket.bucketName
       },
     });
 
@@ -47,12 +71,13 @@ export class PhotorecogStack extends cdk.Stack {
       })
     );
     imageBucket.grantRead(rekogFunc);
+    resizedBucket.grantPut(rekogFunc);
     imageSortTable.grantWriteData(rekogFunc);
 
     rekogFunc.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['rekognition:DetectLabels'],
+        actions: ["rekognition:DetectLabels"],
         resources: ["*"],
       })
     );
