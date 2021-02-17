@@ -2,14 +2,16 @@
 # Lambda function to detect labels in image using Amazon Rekognition
 #
 
-from PIL import Image
-import uuid
 import logging
 import boto3
 from botocore.exceptions import ClientError
 import os
 from urllib.parse import unquote_plus
 from boto3.dynamodb.conditions import Key, Attr
+import uuid
+from PIL import Image
+
+thumbBucket = os.environ['RESIZEDBUCKET']
 
 # Set the minimum confidence for Amazon Rekognition
 
@@ -29,9 +31,6 @@ rekognition_client = boto3.client('rekognition')
 # Constructor for DynamoDB resource object
 dynamodb = boto3.resource('dynamodb')
 
-resizedBucket = os.environ["RESIZEBUCKET"]
-
-
 def handler(event, context):
 
     print("Lambda processing event: ", event)
@@ -46,7 +45,6 @@ def handler(event, context):
         rekFunction(ourBucket, ourKey)
 
     return
-
 
 def generateThumb(ourBucket, ourKey):
 
@@ -69,7 +67,7 @@ def generateThumb(ourBucket, ourKey):
 
     # Upload the thumbnail to the thumbnail bucket
     try:
-        s3_client.upload_file(upload_path, resizedBucket, safeKey)
+        s3_client.upload_file(upload_path, thumbBucket, safeKey)
     except ClientError as e:
         logging.error(e)
 
@@ -79,26 +77,24 @@ def generateThumb(ourBucket, ourKey):
 
     return
 
-
 def resize_image(image_path, resized_path):
     with Image.open(image_path) as image:
         image.thumbnail(tuple(x / 2 for x in image.size))
         image.save(resized_path)
 
-
 def rekFunction(ourBucket, ourKey):
-
+    
     # Clean the string to add the colon back into requested name which was substitued by Amplify Library.
     safeKey = replaceSubstringWithColon(ourKey)
-
+    
     print('Currently processing the following image')
     print('Bucket: ' + ourBucket + ' key name: ' + safeKey)
 
     # Try and retrieve labels from Amazon Rekognition, using the confidence level we set in minConfidence var
     try:
-        detectLabelsResults = rekognition_client.detect_labels(Image={'S3Object': {'Bucket': ourBucket, 'Name': safeKey}},
-                                                               MaxLabels=10,
-                                                               MinConfidence=minConfidence)
+        detectLabelsResults = rekognition_client.detect_labels(Image={'S3Object': {'Bucket':ourBucket, 'Name':safeKey}},
+        MaxLabels=10,
+        MinConfidence=minConfidence)
 
     except ClientError as e:
         logging.error(e)
@@ -122,6 +118,7 @@ def rekFunction(ourBucket, ourKey):
         # We now have our shiny new item ready to put into DynamoDB
         imageLabels[itemAtt] = newItem
 
+
     # Instantiate a table resource object of our environment variable
     imageLabelsTable = os.environ['TABLE']
     table = dynamodb.Table(imageLabelsTable)
@@ -135,8 +132,6 @@ def rekFunction(ourBucket, ourKey):
     return
 
 # Clean the string to add the colon back into requested name
-
-
 def replaceSubstringWithColon(txt):
 
     return txt.replace("%3A", ":")

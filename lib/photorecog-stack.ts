@@ -28,7 +28,7 @@ export class PhotorecogStack extends cdk.Stack {
     // =====================================================================================
     // Thumbnail Bucket
     // =====================================================================================
-    const resizedBucket = new s3.Bucket(this, "resizedBucket", {
+    const resizedBucket = new s3.Bucket(this, "resizedBuckett", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
     new cdk.CfnOutput(this, "resizedBucket", {
@@ -41,7 +41,7 @@ export class PhotorecogStack extends cdk.Stack {
     // =====================================================================================
     const layer = new lambda.LayerVersion(this, "pil", {
       code: lambda.Code.fromAsset("recogLayer"),
-      compatibleRuntimes: [lambda.Runtime.PYTHON_3_7],
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_6],
       license: "Apache-2.0",
       description:
         "A layer to enable the PIL library in our Rekognition Lambda",
@@ -53,15 +53,15 @@ export class PhotorecogStack extends cdk.Stack {
 
     const rekogFunc = new lambda.Function(this, "rekogFunc", {
       code: lambda.Code.fromAsset("recognitionFunction"),
-      runtime: lambda.Runtime.PYTHON_3_8,
+      runtime: lambda.Runtime.PYTHON_3_6,
       handler: "index.handler",
       timeout: Duration.seconds(30),
       memorySize: 1024,
       layers:[layer],
       environment: {
-        TABLE: imageSortTable.tableName,
-        BUCKET: imageBucket.bucketName,
-        RESIZEBUCKET:resizedBucket.bucketName
+        "TABLE": imageSortTable.tableName,
+        "BUCKET": imageBucket.bucketName,
+        "RESIZEDBUCKET":resizedBucket.bucketName
       },
     });
 
@@ -87,7 +87,7 @@ export class PhotorecogStack extends cdk.Stack {
     ​
     const serviceFn = new lambda.Function(this, 'serviceFunction', {
       code: lambda.Code.fromAsset('serviceLambda'),
-      runtime: lambda.Runtime.PYTHON_3_7,
+      runtime: lambda.Runtime.PYTHON_3_6,
       handler: 'index.handler',
       environment: {
         "TABLE": imageSortTable.tableName,
