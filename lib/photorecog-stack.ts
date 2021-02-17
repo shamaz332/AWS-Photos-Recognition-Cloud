@@ -81,5 +81,24 @@ export class PhotorecogStack extends cdk.Stack {
         resources: ["*"],
       })
     );
+    // =====================================================================================
+    // Lambda for Synchronous Front End
+    // =====================================================================================
+    ​
+    const serviceFn = new lambda.Function(this, 'serviceFunction', {
+      code: lambda.Code.fromAsset('serviceLambda'),
+      runtime: lambda.Runtime.PYTHON_3_7,
+      handler: 'index.handler',
+      environment: {
+        "TABLE": imageSortTable.tableName,
+        "BUCKET": imageBucket.bucketName,
+        "RESIZEDBUCKET": resizedBucket.bucketName
+      },
+    });
+    ​
+    imageBucket.grantWrite(serviceFn);
+    resizedBucket.grantWrite(serviceFn);
+    imageSortTable.grantReadWriteData(serviceFn);
+
   }
 }
